@@ -25,9 +25,9 @@ object BroadcastingRace extends IOApp.Simple {
 
   def source: Stream[IO, T] = Stream.emits(1 to 10000)
 
-  def writer(state: Ref[IO, T]): Pipe[IO, T, T] = _.through(takeEveryNth(42)).evalTap(state.set)
+  def writes(state: Ref[IO, T]): Pipe[IO, T, T] = _.through(takeEveryNth(42)).evalTap(state.set)
 
-  def reader(state: Ref[IO, T]): Pipe[IO, T, T] = _.evalTap { t =>
+  def reads(state: Ref[IO, T]): Pipe[IO, T, T] = _.evalTap { t =>
     state.get.flatMap { s =>
       IO(println(s"state $s is greater than current element $t")).whenA(s > t)
     }
@@ -39,8 +39,8 @@ object BroadcastingRace extends IOApp.Simple {
         .chunkLimit(1)
         .unchunks
         .broadcastThrough(
-          writer(state),
-          reader(state)
+          writes(state),
+          reads(state)
         )
         .onFinalize(IO(println("Finished the broadcasting race. Are you confused too?")))
     }
