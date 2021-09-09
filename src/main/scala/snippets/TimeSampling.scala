@@ -17,7 +17,7 @@ object TimeSampling extends IOApp {
       Stream.sleep_[IO](producedRate) ++
       Stream.emit(1) ++
       Stream.sleep_[IO](producedRate)
-  }.repeat.unchunk
+  }.repeat.chunkLimit(1).unchunks
 
   val referenced: Stream[IO, Unit] = {
     Stream.eval(Ref.of[IO, Option[Int]](None)).flatMap { sample =>
