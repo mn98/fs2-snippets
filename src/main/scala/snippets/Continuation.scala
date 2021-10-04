@@ -11,10 +11,11 @@ object Continuation extends IOApp.Simple {
   def increment(count: Ref[IO, Int], amount: Int): Stream[IO, Unit] =
     Stream
       .eval(count.updateAndGet(_ + amount))
-      .evalMap(c => IO(println(s"count = $c")))
+      .debug(c => s"Incrementing by $amount, count = $c")
       .repeat
       .metered(500.milliseconds)
       .interruptAfter(5.seconds)
+      .drain
 
   val program: Stream[IO, Unit] =
     Stream.eval(Ref.of[IO, Int](0)).flatMap { count =>
