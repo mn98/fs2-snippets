@@ -16,47 +16,9 @@ object Day6 extends IOApp.Simple {
       .through(text.utf8.decode andThen text.lines)
       .filterNot(_.isEmpty)
 
-  trait Fish {
-    def timer: Int
+  val fish: Stream[IO, List[String]] = input.take(1).map(_.split(",").toList)
 
-    def age: Seq[Fish]
-  }
-
-  object Fish {
-    def apply(): Fish = FishyMcFishFace(8)
-
-    def at(t: Int): Fish = FishyMcFishFace(t)
-
-    private case class FishyMcFishFace(timer: Int) extends Fish {
-      override def age: Seq[Fish] = {
-        if (timer > 0) Seq(this.copy(timer = timer - 1))
-        else Seq(Fish.at(6), Fish())
-      }
-    }
-  }
-
-  val program1: Stream[IO, Unit] = {
-
-    val fish = input.take(1).map(_.split(",").toList.map(t => Fish.at(t.toInt)))
-
-    fish.flatMap { fish =>
-      Stream.eval(Ref[IO].of(fish)).flatMap { fish =>
-        Stream
-          .eval(fish.update(_.flatMap(_.age)))
-          .repeatN(80)
-          .onFinalize {
-            fish.get.flatMap { fish =>
-              IO(println(s"There are ${fish.size} fish after 80 days."))
-            }
-          }
-      }
-    }
-  }
-
-
-  val program2: Stream[IO, Unit] = {
-
-    val fish = input.take(1).map(_.split(",").toList)
+  def program(days: Int): Stream[IO, Unit] = {
 
     Stream.eval(Ref[IO].of(Seq.fill(9)(0L))).flatMap { fishByTime =>
       fish.flatMap { fish =>
@@ -70,7 +32,7 @@ object Day6 extends IOApp.Simple {
               }
             }
 
-        def evolve(days: Int) =
+        val evolve =
           Stream.eval {
             fishByTime.update { fishByTime =>
               fishByTime
@@ -86,11 +48,11 @@ object Day6 extends IOApp.Simple {
               }
             }
 
-        initialize ++ evolve(256)
+        initialize ++ evolve
       }
     }
   }
 
-  override def run: IO[Unit] = (program1 ++ program2).compile.drain
+  override def run: IO[Unit] = (program(80) ++ program(256)).compile.drain
 
 }
