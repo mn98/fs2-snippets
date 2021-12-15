@@ -1,25 +1,21 @@
 package aoc
 
+import cats.effect.IO
 import cats.effect.kernel.Ref
-import cats.effect.{IO, IOApp}
 import cats.syntax.all._
-import fs2.io.file.{Files, Flags, Path}
-import fs2.{Stream, text}
+import fs2.Stream
 
-import java.nio.file.Paths
+object Day8 extends AOCApp {
 
-object Day8 extends IOApp.Simple {
+  override def inputFileName: String = "AOC_8_input.txt"
 
   case class Entry(signals: Seq[String], outputs: Seq[String]) {
     def signalSets: Seq[Set[Char]] = signals.map(_.toSet)
   }
 
-  val input: Stream[IO, Entry] =
-    Files[IO]
-      .readAll(Path.fromNioPath(Paths.get(s"${System.getenv("HOME")}/Documents/AOC_8_input.txt")), 1024, Flags.Read)
-      .through(text.utf8.decode andThen text.lines)
+  def entries: Stream[IO, Entry] =
+    input
       .filterNot(_.isEmpty)
-      .debug()
       .map { line =>
         line.split("\\|").toList match {
           case signals :: outputs :: Nil =>
@@ -30,9 +26,9 @@ object Day8 extends IOApp.Simple {
         }
       }
 
-  val program1: Stream[IO, Unit] = {
+  val part1: Stream[IO, Unit] = {
     Stream.eval(Ref[IO].of(0)).flatMap { counter =>
-      input.evalMap { entry =>
+      entries.evalMap { entry =>
         counter.update(_ + entry.outputs.count(o => Set(2, 4, 3, 7)(o.length)))
       }
         .onFinalize {
@@ -43,9 +39,9 @@ object Day8 extends IOApp.Simple {
     }
   }
 
-  val program2: Stream[IO, Unit] = {
+  val part2: Stream[IO, Unit] = {
     Stream.eval(Ref[IO].of(0L)).flatMap { sum =>
-      input.evalMap { entry =>
+      entries.evalMap { entry =>
 
         val one = entry.signalSets.find(_.size == 2).get
         val seven = entry.signalSets.find(_.size == 3).get
@@ -84,5 +80,4 @@ object Day8 extends IOApp.Simple {
     }
   }
 
-  override def run: IO[Unit] = (program1 ++ program2).compile.drain
 }
