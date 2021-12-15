@@ -1,20 +1,18 @@
 package aoc
 
-import cats.effect.{IO, IOApp}
+import cats.effect.IO
 import cats.syntax.all._
-import fs2.io.file.{Files, Flags, Path}
-import fs2.{Stream, text}
+import fs2.Stream
 
-import java.nio.file.Paths
 import scala.annotation.tailrec
 import scala.math.BigDecimal.RoundingMode
 
-object Day7 extends IOApp.Simple {
+object Day7 extends AOCApp {
 
-  val input: Stream[IO, List[Int]] =
-    Files[IO]
-      .readAll(Path.fromNioPath(Paths.get(s"${System.getenv("HOME")}/Documents/AOC_7_input.txt")), 1024, Flags.Read)
-      .through(text.utf8.decode andThen text.lines)
+  override def inputFileName: String = "AOC_7_input.txt"
+
+  def positions: Stream[IO, List[Int]] =
+    input
       .filterNot(_.isEmpty)
       .map(_.split(",").toList.map(_.toInt))
 
@@ -42,7 +40,7 @@ object Day7 extends IOApp.Simple {
   }
 
   def crabs(f: (Double, List[Int]) => Double): Stream[IO, Unit] =
-    input.map { positions =>
+    positions.map { positions =>
       val a = positions.min.toDouble
       val b = positions.max.toDouble
       (bisection(slope(f(_, positions), _, 0.1), a, b, 0.01), positions)
@@ -52,8 +50,8 @@ object Day7 extends IOApp.Simple {
       IO(println(s"root is $root, to nearest whole is $rootInt and fuel required is $fuel"))
     }
 
-  val program: Stream[IO, Unit] = crabs(fuelRequiredForPart1) ++ crabs(fuelRequiredForPart2)
+  override def part1: Stream[IO, Unit] = crabs(fuelRequiredForPart1)
 
-  override def run: IO[Unit] = program.compile.drain
+  override def part2: Stream[IO, Unit] = crabs(fuelRequiredForPart2)
 
 }
