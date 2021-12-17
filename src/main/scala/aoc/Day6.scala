@@ -1,24 +1,16 @@
 package aoc
 
+import cats.effect.IO
 import cats.effect.kernel.Ref
-import cats.effect.{IO, IOApp}
-import cats.syntax.all._
-import fs2.io.file.{Files, Flags, Path}
-import fs2.{Stream, text}
+import fs2.Stream
 
-import java.nio.file.Paths
+object Day6 extends AOCApp {
 
-object Day6 extends IOApp.Simple {
-
-  val input: Stream[IO, String] =
-    Files[IO]
-      .readAll(Path.fromNioPath(Paths.get(s"${System.getenv("HOME")}/Documents/AOC_6_input.txt")), 1024, Flags.Read)
-      .through(text.utf8.decode andThen text.lines)
-      .filterNot(_.isEmpty)
+  override def inputFileName: String = "AOC_6_input.txt"
 
   val fish: Stream[IO, List[String]] = input.take(1).map(_.split(",").toList)
 
-  def program(days: Int): Stream[IO, Unit] = {
+  def evolution(days: Int): Stream[IO, Unit] = {
 
     Stream.eval(Ref[IO].of(Seq.fill(9)(0L))).flatMap { fishByTime =>
       fish.flatMap { fish =>
@@ -53,6 +45,8 @@ object Day6 extends IOApp.Simple {
     }
   }
 
-  override def run: IO[Unit] = (program(80) ++ program(256)).compile.drain
+  override def part1: Stream[IO, Unit] = evolution(80)
+
+  override def part2: Stream[IO, Unit] = evolution(256)
 
 }
