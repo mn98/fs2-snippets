@@ -1,6 +1,6 @@
 package aoc
 
-import cats.effect.{IO, ParallelF}
+import cats.effect.IO
 import cats.effect.kernel.{Concurrent, Ref}
 import cats.syntax.all._
 import fs2.Stream
@@ -9,7 +9,7 @@ object Day10 extends AOCApp {
 
   override def inputFileName: String = "AOC_10_input.txt"
 
-  val lines: Stream[IO, String] = input.takeWhile(_.nonEmpty) //.take(1)
+  val lines: Stream[IO, String] = input.takeWhile(_.nonEmpty)
 
   trait TokenParser[F[_]] {
     def parse(token: Char): F[Boolean]
@@ -42,14 +42,14 @@ object Day10 extends AOCApp {
         new TokenParser[F] {
 
           override def parse(token: Char): F[Boolean] = {
-            tokenStack.modify { chunkStack =>
-              if (openers.contains(token)) (chunkStack :+ token, true)
+            tokenStack.modify { tokenStack =>
+              if (openers.contains(token)) (tokenStack :+ token, true)
               else {
-                chunkStack.lastOption match {
+                tokenStack.lastOption match {
                   case Some(previousToken) =>
-                    if (previousToken == openerForCloser(token)) (chunkStack.dropRight(1), true)
-                    else (chunkStack, false)
-                  case None => (chunkStack, false)
+                    if (previousToken == openerForCloser(token)) (tokenStack.dropRight(1), true)
+                    else (tokenStack, false)
+                  case None => (tokenStack, false)
                 }
               }
             }
@@ -71,23 +71,34 @@ object Day10 extends AOCApp {
     Stream.eval(Ref[IO].of(Seq.empty[Seq[Char]])).flatMap { autoCompletions =>
       Stream.eval(Ref[IO].of(Seq.empty[Char])).flatMap { failedTokens =>
         lines.evalMap { line =>
-          val lineParser = Stream.eval(TokenParser[IO]).flatMap { tokenParser =>
-            Stream
-              .emits(line.toIndexedSeq)
-              .evalMap { token =>
-                tokenParser.parse(token)
-                  .flatTap(result =>
-                    (IO(println(s"Failed at $token")) >> failedTokens.update(_ :+ token)).whenA(!result)
-                  )
-                  .map(result => token -> result)
+          val lineParser =
+            Stream.eval(TokenParser[IO]).flatMap { tokenParser =>
+              Stream.eval(Ref[IO].of(false)).flatMap { lineParsingHasFailed =>
+                Stream
+                  .emits(line.toIndexedSeq)
+                  .evalMap { token =>
+                    tokenParser.parse(token)
+                      .flatTap(result =>
+                        (
+                          IO(println(s"Failed at $token")) >>
+                            failedTokens.update(_ :+ token) >>
+                            lineParsingHasFailed.set(true)
+                          ).whenA(!result)
+                      )
+                      .map(result => token -> result)
+                  }
+                  .takeWhile({ case (_, result) => result }, true)
+                  .onFinalize {
+                    lineParsingHasFailed.get.flatMap { lineParsingHasFailed =>
+                      tokenParser.autoCompletion.flatMap { autoCompletion =>
+                        IO(println(s"Autocompletion: $autoCompletion")) >>
+                          autoCompletions.update(_.appended(autoCompletion))
+                      }
+                        .whenA(!lineParsingHasFailed)
+                    }
+                  }
               }
-              .takeWhile({ case (_, result) => result }, true)
-              .onFinalize {
-                tokenParser.autoCompletion.flatMap { autoCompletion =>
-                  autoCompletions.update(_.appended(autoCompletion))
-                }
-              }
-          }
+            }
           lineParser.compile.drain
         }
           .onFinalize {
@@ -97,9 +108,11 @@ object Day10 extends AOCApp {
             } >>
               autoCompletions.get.flatMap { autoCompletions =>
                 val scores = autoCompletions.map { autoCompletion =>
-                  autoCompletion.map(TokenParser.autoCompleteTokenScores).sum
+                  autoCompletion.foldLeft(0L) { case (score, token) =>
+                    score * 5 + TokenParser.autoCompleteTokenScores(token)
+                  }
                 }
-                scores.sorted.get(scores.size * 2 - 1).traverse_ { score =>
+                scores.sorted.get((scores.size - 1) / 2).traverse_ { score =>
                   IO(println(s"Autocompletion winning score is $score"))
                 }
               }
