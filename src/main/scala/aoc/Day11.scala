@@ -33,13 +33,9 @@ object Day11 extends AOCApp {
         }).toSet
       }
 
-      def rowLimit: Int = rows.size
+      def rowLimit: Int = energies.size
 
-      def columnLimit: Int = rows.head.size
-
-      def rows: Seq[Seq[Int]] = energies
-
-      def columns: Seq[Seq[Int]] = rows.head.indices.map(i => rows.map(_ (i)))
+      def columnLimit: Int = energies.head.size
 
       def energyAt(coordinate: Coordinate): Int = energies(coordinate.r)(coordinate.c)
 
@@ -54,7 +50,7 @@ object Day11 extends AOCApp {
 
       def withIncreasedEnergyAt(coordinates: Set[Coordinate]): EnergyMap = {
         EnergyMap(
-          rows.zipWithIndex.map { case (row, r) =>
+          energies.zipWithIndex.map { case (row, r) =>
             row.zipWithIndex.map { case (energy, c) =>
               if (coordinates.contains(Coordinate(r, c)) && energy > 0) {
                 EnergyMap.increaseEnergy(energy)
@@ -104,7 +100,7 @@ object Day11 extends AOCApp {
                     val neighboursByFlashedCoordinate =
                       flashedDuringThisStep.get.flatMap { flashedDuringThisStep =>
                         energyMap.get.map { energyMap =>
-                          flashing.map(energyMap.neighboursAt(_) -- (flashedDuringThisStep ++ flashing))
+                          flashing.map(energyMap.neighboursAt(_) -- flashedDuringThisStep)
                         }
                       }
 
