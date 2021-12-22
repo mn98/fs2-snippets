@@ -15,6 +15,8 @@ object Day11 extends AOCApp {
 
     def flashes: F[Long]
 
+    def synchronized: F[Boolean]
+
     def grid: F[String]
   }
 
@@ -134,6 +136,10 @@ object Day11 extends AOCApp {
 
           override def flashes: F[Long] = flashCount.get
 
+          override def synchronized: F[Boolean] = energyMap.get.map { energyMap =>
+            energyMap.energies.flatten.forall(_ == 0)
+          }
+
           override def grid: F[String] = energyMap.get.map { energyMap =>
             s"== GRID ==\n${energyMap.energies.map(_.mkString("")).mkString("\n")}\n=========="
           }
@@ -177,6 +183,31 @@ object Day11 extends AOCApp {
     }
   }
 
-  override def part2: Stream[IO, Unit] = Stream.empty
+  override def part2: Stream[IO, Unit] = {
+    Stream.eval(Ref[IO].of(EnergyMap())).flatMap {
+      energyMap =>
+        read(energyMap) ++
+          Stream.eval(energyMap.get).flatMap { energyMap =>
+            Stream.eval(Octopuses[IO](energyMap.energies)).flatMap { octopuses =>
+              Stream.eval(Ref[IO].of(0)).flatMap { stepCounter =>
+                Stream.eval(octopuses.grid.map(grid => println(s"Initial\n$grid"))) ++
+                  Stream
+                    .unfoldLoopEval(octopuses) { octopuses =>
+                      stepCounter.update(_ + 1) >>
+                        octopuses.evolve >>
+                        octopuses.synchronized.map { synchronized =>
+                          () -> (if (synchronized) None else Some(octopuses))
+                        }
+                    }
+                    .onFinalize {
+                      stepCounter.get.flatMap { stepCounter =>
+                        IO(println(s"Octopuses synchronized at step $stepCounter"))
+                      }
+                    }
+              }
+            }
+          }
+    }
+  }
 
 }
