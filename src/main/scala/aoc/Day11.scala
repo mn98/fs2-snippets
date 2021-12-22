@@ -88,6 +88,7 @@ object Day11 extends AOCApp {
               }
 
             incrementAllEnergies >>
+              grid.flatMap(grid => F.delay(println(s"Incremented\n$grid"))) >>
               findFlashingCoordinates.flatMap { flashingCoordinates =>
                 Ref[F].of(flashingCoordinates).flatMap { flashedInThisStep =>
                   val loop = Stream.unfoldEval(flashingCoordinates) { flashingCoordinates =>
@@ -108,6 +109,7 @@ object Day11 extends AOCApp {
                         }
 
                     propagateFlashes >>
+                      grid.flatMap(grid => F.delay(println(s"Propagated\n$grid"))) >>
                       findFlashingCoordinates.flatMap { flashingCoordinates =>
                         flashedInThisStep.get.map { flashedInThisStep =>
                           val newlyFlashingCoordinates = flashingCoordinates -- flashedInThisStep
@@ -149,27 +151,24 @@ object Day11 extends AOCApp {
     Stream.eval(Ref[IO].of(EnergyMap())).flatMap {
       energyMap =>
         read(energyMap) ++
-          Stream.eval(energyMap.get).flatMap {
-            energyMap =>
-              Stream.eval(Octopuses[IO](energyMap.energies)).flatMap {
-                octopuses =>
-                  Stream.eval(Ref[IO].of(0)).flatMap {
-                    stepCounter =>
-                      Stream.eval(octopuses.grid.map(grid => println(s"Initial\n$grid"))) ++
-                        Stream
-                          .eval(octopuses.evolve >> stepCounter.update(_ + 1))
-                          .repeatN(30)
-                          .evalTap(_ => stepCounter.get.flatMap {
-                            stepCounter => octopuses.grid.map(grid => println(s"Step $stepCounter\n$grid"))
-                          })
-                          .onFinalize {
-                            octopuses.flashes.flatMap {
-                              flashes =>
-                                IO(println(s"Counted $flashes flashes"))
-                            }
-                          }
-                  }
+          Stream.eval(energyMap.get).flatMap { energyMap =>
+            Stream.eval(Octopuses[IO](energyMap.energies)).flatMap { octopuses =>
+              Stream.eval(Ref[IO].of(0)).flatMap { stepCounter =>
+                Stream.eval(octopuses.grid.map(grid => println(s"Initial\n$grid"))) ++
+                  Stream
+                    .eval(octopuses.evolve >> stepCounter.update(_ + 1))
+                    .repeatN(30)
+                    .evalTap(_ => stepCounter.get.flatMap {
+                      stepCounter => octopuses.grid.map(grid => println(s"Step $stepCounter\n$grid"))
+                    })
+                    .onFinalize {
+                      octopuses.flashes.flatMap {
+                        flashes =>
+                          IO(println(s"Counted $flashes flashes"))
+                      }
+                    }
               }
+            }
           }
     }
   }
