@@ -88,7 +88,7 @@ object Day11 extends AOCApp {
               }
 
             incrementAllEnergies >>
-              grid.flatMap(grid => F.delay(println(s"Incremented\n$grid"))) >>
+              //grid.flatMap(grid => F.delay(println(s"Incremented\n$grid"))) >>
               Ref[F].of(Set.empty[Coordinate]).flatMap { flashedInThisStep =>
                 findFlashingCoordinates.flatMap { flashingCoordinates =>
                   val loop = Stream.unfoldEval(flashingCoordinates) { flashingCoordinates =>
@@ -98,18 +98,22 @@ object Day11 extends AOCApp {
                         .updateAndGet(_ ++ flashingCoordinates)
                         .flatMap { flashedInThisStep =>
                           energyMap.update { energyMap =>
-                            val neighboursPerFlashingCoordinate =
-                              flashingCoordinates.map {
-                                energyMap.neighboursAt(_) -- flashedInThisStep
+                            val neighboursPerFlashingCoordinate = {
+                              flashingCoordinates.map { flashingCoordinate =>
+                                flashingCoordinate ->
+                                  (energyMap.neighboursAt(flashingCoordinate) -- flashedInThisStep)
                               }
+                            }
+                            //println(s"Flashing: ${flashingCoordinates.toSeq.sortBy(coordinate => (coordinate.r, coordinate.c))}")
+                            //println(s"Neighbours: ${neighboursPerFlashingCoordinate.toSeq.sortBy(coordinate => (coordinate._1.r, coordinate._1.c))}")
                             neighboursPerFlashingCoordinate.foldLeft(energyMap) {
-                              case (energyMap, neighbours) => energyMap.withIncreasedEnergyAt(neighbours)
+                              case (energyMap, (_, neighbours)) => energyMap.withIncreasedEnergyAt(neighbours)
                             }
                           }
                         }
 
                     propagateFlashes >>
-                      grid.flatMap(grid => F.delay(println(s"Propagated\n$grid"))) >>
+                      //grid.flatMap(grid => F.delay(println(s"Propagated\n$grid"))) >>
                       findFlashingCoordinates.flatMap { flashingCoordinates =>
                         flashedInThisStep.get.map { flashedInThisStep =>
                           val newlyFlashingCoordinates = flashingCoordinates -- flashedInThisStep
