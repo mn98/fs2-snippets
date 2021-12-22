@@ -89,8 +89,8 @@ object Day11 extends AOCApp {
 
             incrementAllEnergies >>
               grid.flatMap(grid => F.delay(println(s"Incremented\n$grid"))) >>
-              findFlashingCoordinates.flatMap { flashingCoordinates =>
-                Ref[F].of(flashingCoordinates).flatMap { flashedInThisStep =>
+              Ref[F].of(Set.empty[Coordinate]).flatMap { flashedInThisStep =>
+                findFlashingCoordinates.flatMap { flashingCoordinates =>
                   val loop = Stream.unfoldEval(flashingCoordinates) { flashingCoordinates =>
 
                     val propagateFlashes =
@@ -120,11 +120,11 @@ object Day11 extends AOCApp {
                         }
                       }
                   }
-
-                  loop.compile.drain >> flashedInThisStep.get.flatMap { flashedInThisStep =>
+                  loop.compile.drain
+                } >>
+                  flashedInThisStep.get.flatMap { flashedInThisStep =>
                     flashCount.update(_ + flashedInThisStep.size)
                   }
-                }
               }
           }
 
@@ -157,7 +157,7 @@ object Day11 extends AOCApp {
                 Stream.eval(octopuses.grid.map(grid => println(s"Initial\n$grid"))) ++
                   Stream
                     .eval(octopuses.evolve >> stepCounter.update(_ + 1))
-                    .repeatN(30)
+                    .repeatN(100)
                     .evalTap(_ => stepCounter.get.flatMap {
                       stepCounter => octopuses.grid.map(grid => println(s"Step $stepCounter\n$grid"))
                     })
