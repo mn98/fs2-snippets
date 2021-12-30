@@ -20,7 +20,9 @@ object Day14 extends AOCApp {
   trait Polymer[F[_]] {
     def step: F[Unit]
 
-    def get: F[String]
+    def getTemplate: F[String]
+
+    def getPairCounts: F[Map[String, Long]]
 
     def getElementCounts: F[Map[Char, Long]]
   }
@@ -32,81 +34,77 @@ object Day14 extends AOCApp {
                    )(
                      implicit F: Sync[F]
                    ): F[Polymer[F]] = {
-      Ref[F].of(template.string).flatMap { polymer =>
-        Ref[F].of(0L).flatMap { stepCounter =>
 
-          val initialPairs = {
-            val templatePairs = template.string.sliding(2).toList
-            templatePairs
-              .distinct
-              .map(pair => pair -> templatePairs.count(_ == pair).toLong).toMap
-          }
-          val initialElements = {
-            val templateElements = template.string.toCharArray
-            templateElements
-              .distinct
-              .map(element => element -> templateElements.count(_ == element).toLong).toMap
-          }
+      Ref[F].of(0L).flatMap { stepCounter =>
 
-          Ref[F].of(initialPairs).flatMap { pairCounter =>
-            Ref[F].of(initialElements).map { elementCounter =>
-              new Polymer[F] {
+        val initialPairs = {
+          val templatePairs = template.string.sliding(2).toList
+          templatePairs
+            .distinct
+            .map(pair => pair -> templatePairs.count(_ == pair).toLong).toMap
+        }
+        val initialElements = {
+          val templateElements = template.string.toCharArray
+          templateElements
+            .distinct
+            .map(element => element -> templateElements.count(_ == element).toLong).toMap
+        }
 
-                override def step: F[Unit] = {
-                  stepCounter.updateAndGet(_ + 1).flatMap { stepCounter =>
-                    F.delay(println(s"Performing step $stepCounter"))
-                  } >> {
-                    val updates = rules.map { rule =>
-                      pairCounter.modify { pairCounter =>
+        Ref[F].of(initialPairs).flatMap { pairCounter =>
+          Ref[F].of(initialElements).map { elementCounter =>
+            new Polymer[F] {
+
+              override def step: F[Unit] = {
+                stepCounter.updateAndGet(_ + 1).flatMap { stepCounter =>
+                  F.delay(println(s"Performing step $stepCounter"))
+                } >> {
+                  val updateElementCounter = pairCounter.get.flatMap { pairCounter =>
+                    elementCounter.update { elementCounter =>
+                      rules.toSeq.foldLeft(elementCounter) { case (elementCounter, rule) =>
                         if (pairCounter.contains(rule.pair)) {
-                          val (pair1, pair2) = rule.pairs
-                          val updatedPairCounter = pairCounter
-                            .updated(pair1, pairCounter.getOrElse(pair1, 0L) + 1)
-                            .updated(pair2, pairCounter.getOrElse(pair2, 0L) + 1)
-                            .updated(rule.pair, pairCounter(rule.pair) - 1)
-                          val newElement = rule.element
-                          (updatedPairCounter, Some(newElement))
+                          elementCounter.updated(
+                            rule.element,
+                            elementCounter.getOrElse(rule.element, 0L) + pairCounter(rule.pair)
+                          )
                         } else {
-                          (pairCounter, None)
+                          elementCounter
                         }
                       }
-                        .flatMap { newElement =>
-                          newElement.traverse_ { newElement =>
-                            elementCounter.update { elementCounter =>
-                              elementCounter.updated(newElement, elementCounter.getOrElse(newElement, 0L) + 1)
-                            }
-                          }
-                        }
                     }
-                    updates.reduce(_ >> _)
                   }
+                  val updatePairCounter = pairCounter.update { pairCounter =>
+                    val startOfStepPairCounter = pairCounter
+                    //println(s"Start of step pair counts:\n${pairCounter.mkString("\n")}")
+                    rules
+                      .toSeq
+                      .filter(rule => pairCounter.exists { case (p, c) => p == rule.pair && c > 0 })
+                      .foldLeft(pairCounter) { case (pairCounter, rule) =>
+                        val (pair1, pair2) = rule.pairs
+                        val rulePairCount = startOfStepPairCounter(rule.pair)
+                        //println(s"Actioning $rule: adding ${rulePairCount}x $pair1 and $pair2, removing ${rule.pair}")
+                        val incrementsByPair = Seq(
+                          pair1 -> rulePairCount,
+                          pair2 -> rulePairCount,
+                          rule.pair -> -rulePairCount
+                        )
+                        val updated = incrementsByPair.foldLeft(pairCounter) {
+                          case (pairCounter, (pair, increment)) =>
+                            pairCounter.updated(pair, pairCounter.getOrElse(pair, 0L) + increment)
+                        }
+                        //println(s"Updated pair counts:\n${updated.mkString("\n")}")
+                        updated
+                      }
+                  }
+                  updateElementCounter >> updatePairCounter
                 }
-
-                //                override def step: F[Unit] = {
-                //                  stepCounter.updateAndGet(_ + 1).flatMap { stepCounter =>
-                //                    F.delay(println(s"Performing step $stepCounter"))
-                //                  } >>
-                //                    polymer.update { polymer =>
-                //                      val head =
-                //                        rules
-                //                          .find(_.pair == polymer.take(2))
-                //                          .map(_.result)
-                //                          .getOrElse(polymer.take(2))
-                //                      val tail = polymer.drop(1).sliding(2).toList.map { pair =>
-                //                        rules
-                //                          .find(_.pair == pair)
-                //                          .map(_.result.drop(1))
-                //                          .getOrElse(pair)
-                //                      }
-                //                      (head :: tail).mkString("")
-                //                    }
-                //                }
-
-                override def get: F[String] = polymer.get
-
-                override def getElementCounts: F[Map[Char, Long]] = elementCounter.get
-
               }
+
+              override def getTemplate: F[String] = F.delay(template.string)
+
+              override def getPairCounts: F[Map[String, Long]] = pairCounter.get
+
+              override def getElementCounts: F[Map[Char, Long]] = elementCounter.get
+
             }
           }
         }
@@ -143,26 +141,17 @@ object Day14 extends AOCApp {
               Stream.eval(Polymer[IO](template, rules)).flatMap { polymer =>
                 Stream
                   .eval(polymer.step)
-                  //                  .evalTap(_ =>
-                  //                    polymer.get.flatMap { string =>
-                  //                      IO(println(s"$string"))
-                  //                    }
-                  //                  )
                   .repeatN(steps)
                   .onFinalize {
-                    polymer.getElementCounts.flatMap { elementCounts =>
-                      IO(println(s"Counts\n${elementCounts.mkString("\n")}"))wh
-                    }
-                    //                    polymer.get.flatMap { string =>
-                    //                      val elementCounts = string.toCharArray.distinct.map { element =>
-                    //                        element -> string.count(_ == element)
-                    //                      }.sortBy(_._2)
-                    //                      val smallest = elementCounts.head._2
-                    //                      val largest = elementCounts.last._2
-                    //                      val difference = largest - smallest
-                    //                      IO(println(s"Counts\n${elementCounts.mkString("\n")}")) >>
-                    //                        IO(println(s"Difference = $difference"))
-                    //                    }
+                    polymer.getPairCounts.flatMap { pairCounts =>
+                      IO(println(s"Pair counts\n${pairCounts.mkString("\n")}"))
+                    } >>
+                      polymer.getElementCounts.flatMap { elementCounts =>
+                        val sortedCounts = elementCounts.toList.sortBy(_._2)
+                        val diff = sortedCounts.last._2 - sortedCounts.head._2
+                        IO(println(s"Element counts\n${elementCounts.mkString("\n")}")) >>
+                          IO(println(s"Difference is $diff"))
+                      }
                   }
               }
             }
@@ -173,6 +162,6 @@ object Day14 extends AOCApp {
 
   override def part1: Stream[IO, Unit] = build(10)
 
-  override def part2: Stream[IO, Unit] = build(1)
+  override def part2: Stream[IO, Unit] = build(40)
 
 }
