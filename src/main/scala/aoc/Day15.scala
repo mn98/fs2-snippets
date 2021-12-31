@@ -5,7 +5,8 @@ import cats.effect.kernel.Ref
 import cats.syntax.all._
 import fs2.Stream
 
-import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.util.control.Breaks.{break, breakable}
 
 object Day15 extends AOCApp {
 
@@ -17,77 +18,116 @@ object Day15 extends AOCApp {
 
   case class Cavern(riskLevels: Seq[Seq[Int]]) {
 
-    private def rowLimit: Int = riskLevels.size
+    private val rowLimit: Int = riskLevels.size
 
-    private def columnLimit: Int = riskLevels.head.size
+    private val columnLimit: Int = riskLevels.headOption.map(_.size).getOrElse(0)
 
-    def points: Seq[Point] = riskLevels.zipWithIndex.flatMap { case (row, r) =>
+    val points: Seq[Point] = riskLevels.zipWithIndex.flatMap { case (row, r) =>
       row.zipWithIndex.map { case (risk, c) =>
         Point(Coordinate(r, c), risk)
       }
     }
 
-    def start: Coordinate = Coordinate(0, 0)
+    val start: Coordinate = Coordinate(0, 0)
 
-    def end: Coordinate = Coordinate(rowLimit - 1, columnLimit - 1)
+    val end: Coordinate = Coordinate(rowLimit - 1, columnLimit - 1)
 
-    def pointAt(coordinate: Coordinate): Point = points.find(_.coordinate == coordinate).get
+    def pointAt(coordinate: Coordinate): Point = points((coordinate.r * columnLimit) + coordinate.c)
 
-    def graph: Map[Point, Set[Point]] = {
-      points.map { point =>
-        val row = point.coordinate.r
-        val column = point.coordinate.c
-        val neighbours = for {
-          coordinate <- Seq(
-            Coordinate(row - 1, column),
-            Coordinate(row + 1, column),
-            Coordinate(row, column - 1),
-            Coordinate(row, column + 1),
-          ).filter(coordinate =>
-            coordinate.r >= 0 && coordinate.r < rowLimit && coordinate.c >= 0 && coordinate.c < columnLimit
-          )
-        } yield {
-          points.find(p => p.coordinate == coordinate)
-        }
-        point -> neighbours.flatten.toSet
-      }.toMap
+    def neighboursAt(coordinate: Coordinate): Seq[Coordinate] = {
+      val row = coordinate.r
+      val column = coordinate.c
+      for {
+        coordinate <- Seq(
+          Coordinate(row - 1, column),
+          Coordinate(row + 1, column),
+          Coordinate(row, column - 1),
+          Coordinate(row, column + 1),
+        ).filter(coordinate =>
+          coordinate.r >= 0 && coordinate.r < rowLimit && coordinate.c >= 0 && coordinate.c < columnLimit
+        )
+      } yield {
+        coordinate
+      }
+    }
+
+    lazy val graph: Vector[Seq[Coordinate]] = {
+      Vector(points.map(point => neighboursAt(point.coordinate)): _*)
     }
 
     def shortestDistances(from: Coordinate): Seq[(Point, Int)] = {
 
-      val queue = mutable.PriorityQueue(pointAt(from) -> 0)((a, b) => a._2 compare b._2)
+      val altQueue = ArrayBuffer.from(points.map(_.coordinate -> Int.MaxValue))
+      altQueue(altQueue.indexOf(altQueue.find(_._1 == from).get)) = from -> 0
 
-      val distance = mutable.Map.from(
-        points.map { point =>
-          val distance = if (point.coordinate != from) Int.MaxValue else 0
-          point -> distance
-        }
-      )
+      val distances = ArrayBuffer.from(points.map(point => if (point.coordinate != from) Int.MaxValue else 0))
 
-      val previous = mutable.Map.from[Point, Option[Point]](points.map(_ -> None))
+      val previousPoints = ArrayBuffer.fill[Option[Coordinate]](points.size)(None)
 
-      val g = graph
-      println(s"Graph has ${g.size} vertices")
+      val destination = end
+
+      println(s"Graph has ${points.size} vertices")
+
+      val t1 = System.nanoTime()
       var counter = 0
-      while (queue.nonEmpty) {
-        counter += 1
-        println(s"Queue contains ${queue.size} vertices")
-        val (closest, _) = queue.dequeue()
-        val neighbours = g.getOrElse(closest, Set.empty)
-        neighbours.collect {
-          case neighbour =>
-            val alternative = distance(closest) + neighbour.level
-            if (alternative < distance(neighbour)) {
-              distance(neighbour) = alternative
-              previous(neighbour) = Some(closest)
-              if (!queue.exists(_._1 == neighbour)) queue.enqueue(neighbour -> alternative)
+      breakable {
+        while (altQueue.nonEmpty) {
+          counter += 1
+          println(s"Queue contains ${altQueue.size} vertices")
+          val (closest, _) = altQueue.remove(altQueue.indexOf(altQueue.minBy(_._2)))
+          if (closest == destination) break
+          val closestIdx = (closest.r * columnLimit) + closest.c
+          val neighbours = graph(closestIdx)
+          neighbours.foreach { neighbour =>
+            val neighbourIdx = (neighbour.r * columnLimit) + neighbour.c
+            val alternative = distances(closestIdx) + pointAt(neighbour).level
+            if (alternative < distances(neighbourIdx)) {
+              distances(neighbourIdx) = alternative
+              previousPoints(neighbourIdx) = Some(closest)
+              altQueue(altQueue.indexOf(altQueue.find(_._1 == neighbour).get)) = neighbour -> alternative
             }
+          }
         }
       }
 
-      println(s"Graph traversed in $counter iterations")
+      var crumb: Option[Point] = Some(pointAt(destination))
+      val crumbs = ArrayBuffer[Option[Point]](crumb)
+      while (crumb.isDefined) {
+        val crumbIdx = (crumb.get.coordinate.r * columnLimit) + crumb.get.coordinate.c
+        val previousCrumb = previousPoints(crumbIdx).map(pointAt)
+        crumbs.append(previousCrumb)
+        crumb = previousCrumb
+      }
+      val sum = crumbs.flatten.dropRight(1).map(_.level).sum
+      println(s"${crumbs.flatten.size} crumbs sum to = $sum")
 
-      distance.toSeq
+      val t2 = System.nanoTime()
+      val duration = t2 - t1
+      println(s"Graph traversed in $counter iterations in $duration nanos")
+
+      points zip distances
+    }
+
+    def tiled(n: Int): Cavern = {
+      def incremented(i: Int): Int = if (i < 9) i + 1 else 1
+
+      val expanded: Seq[Seq[Int]] = riskLevels.map { row =>
+        row ++ (1 until n).flatMap {
+          var incrementedRow = row
+          _ =>
+            incrementedRow = incrementedRow.map(incremented)
+            incrementedRow
+        }
+      }
+
+      val lengthened: Seq[Seq[Int]] = (1 until n).flatMap {
+        var incrementedGrid = expanded
+        _ =>
+          incrementedGrid = incrementedGrid.map(_.map(incremented))
+          incrementedGrid
+      }
+
+      Cavern(expanded ++ lengthened)
     }
   }
 
@@ -104,7 +144,7 @@ object Day15 extends AOCApp {
         }
       }
 
-  override def part1: Stream[IO, Unit] =
+  override def part1: Stream[IO, Unit] = //Stream.empty
     Stream.eval(Ref[IO].of(Cavern(Seq.empty))).flatMap { cavern =>
       read(cavern) ++
         Stream.eval {
@@ -120,6 +160,21 @@ object Day15 extends AOCApp {
         }
     }
 
-  override def part2: Stream[IO, Unit] = Stream.empty
+  override def part2: Stream[IO, Unit] =
+    Stream.eval(Ref[IO].of(Cavern(Seq.empty))).flatMap { cavern =>
+      read(cavern) ++
+        Stream.eval {
+          cavern.get.map(_.tiled(5)).flatTap(cavern =>
+            IO(println(s"== Tiled(5) ==\n${cavern.riskLevels.map(_.mkString("")).mkString("\n")}\n=========="))
+          ).flatMap { cavern =>
+            val shortestDistances: Seq[(Point, Int)] = cavern.shortestDistances(cavern.start)
+            shortestDistances.find { case (point, _) =>
+              point.coordinate == cavern.end
+            }.traverse_ { case (end, distance) =>
+              IO(println(s"Shortest distance to ${end.coordinate} is $distance"))
+            }
+          }
+        }
+    }
 
 }
