@@ -57,8 +57,8 @@ object Day15 extends AOCApp {
 
     def shortestDistances(from: Coordinate): Seq[(Point, Int)] = {
 
-      val altQueue = ArrayBuffer.from(points.map(_.coordinate -> Int.MaxValue))
-      altQueue(altQueue.indexOf(altQueue.find(_._1 == from).get)) = from -> 0
+      val queue = ArrayBuffer.from(points.map(_.coordinate -> Int.MaxValue))
+      queue(queue.indexOf(queue.find(_._1 == from).get)) = from -> 0
 
       val distances = ArrayBuffer.from(points.map(point => if (point.coordinate != from) Int.MaxValue else 0))
 
@@ -71,10 +71,10 @@ object Day15 extends AOCApp {
       val t1 = System.nanoTime()
       var counter = 0
       breakable {
-        while (altQueue.nonEmpty) {
+        while (queue.nonEmpty) {
           counter += 1
-          println(s"Queue contains ${altQueue.size} vertices")
-          val (closest, _) = altQueue.remove(altQueue.indexOf(altQueue.minBy(_._2)))
+          println(s"Queue contains ${queue.size} vertices")
+          val (closest, _) = queue.remove(queue.indexOf(queue.minBy(_._2)))
           if (closest == destination) break
           val closestIdx = (closest.r * columnLimit) + closest.c
           val neighbours = graph(closestIdx)
@@ -84,7 +84,7 @@ object Day15 extends AOCApp {
             if (alternative < distances(neighbourIdx)) {
               distances(neighbourIdx) = alternative
               previousPoints(neighbourIdx) = Some(closest)
-              altQueue(altQueue.indexOf(altQueue.find(_._1 == neighbour).get)) = neighbour -> alternative
+              queue(queue.indexOf(queue.find(_._1 == neighbour).get)) = neighbour -> alternative
             }
           }
         }
