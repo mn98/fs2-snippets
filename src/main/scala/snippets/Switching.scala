@@ -19,17 +19,17 @@ object Switching extends IOApp.Simple {
 
   override def run: IO[Unit] =
     for {
-      stateOne <- SignallingRef[IO].of(0)
-      stateTwo <- SignallingRef[IO].of(0)
+      stateOne <- SignallingRef.of[IO, Option[Int]](None)
+      stateTwo <- SignallingRef.of[IO, Option[Int]](None)
       _ <- {
         def output(i: Int): Stream[IO, Unit] = {
-          if (i < 1) stateOne.discrete.evalMap(i => IO(println(s"$i")))
-          else stateTwo.discrete.evalMap(i => IO(println(s"$i")))
+          val state = if (i < 1) stateOne else stateTwo
+          state.discrete.unNone.evalMap(i => IO(println(s"$i")))
         }
 
         Stream(
-          odds.metered(1.second).evalMap(stateOne.set),
-          evens.metered(1.second).evalMap(stateTwo.set),
+          odds.metered(1.second).evalMap(i => stateOne.set(Some(i))),
+          evens.metered(1.second).evalMap(i => stateTwo.set(Some(i))),
           plusOrMinusOne.meteredStartImmediately(5.seconds).switchMap(output)
         )
           .parJoinUnbounded
