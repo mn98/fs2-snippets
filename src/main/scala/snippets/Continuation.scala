@@ -13,7 +13,7 @@ object Continuation extends IOApp.Simple {
       .eval(count.updateAndGet(_ + amount))
       .debug(c => s"Incrementing by $amount, count = $c")
       .repeat
-      .metered(500.milliseconds)
+      .meteredStartImmediately(500.milliseconds)
       .interruptAfter(5.seconds)
       .drain
 
