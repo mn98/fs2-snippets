@@ -21,7 +21,6 @@ object Switching extends IOApp.Simple {
     for {
       stateOne <- SignallingRef[IO].of(0)
       stateTwo <- SignallingRef[IO].of(0)
-      switchState <- SignallingRef.of[IO, Option[Int]](None)
       _ <- {
         def output(i: Int): Stream[IO, Unit] = {
           if (i < 1) stateOne.discrete.evalMap(i => IO(println(s"$i")))
@@ -31,9 +30,7 @@ object Switching extends IOApp.Simple {
         Stream(
           odds.metered(1.second).evalMap(stateOne.set),
           evens.metered(1.second).evalMap(stateTwo.set),
-          plusOrMinusOne.take(1).evalMap(i => switchState.set(Some(i))) ++
-            plusOrMinusOne.drop(1).evalMap(i => switchState.set(Some(i))).metered(5.seconds),
-          switchState.discrete.unNone.switchMap(output)
+          plusOrMinusOne.meteredStartImmediately(5.seconds).switchMap(output)
         )
           .parJoinUnbounded
           .interruptAfter(30.seconds)
