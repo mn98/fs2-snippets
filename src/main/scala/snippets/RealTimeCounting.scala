@@ -4,16 +4,20 @@ import cats.effect.kernel.Ref
 import cats.effect.{IO, IOApp}
 import fs2.Stream
 
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object RealTimeCounting extends IOApp.Simple {
 
+  case class Data(count: Int, elapsed: FiniteDuration)
+
   val program: Stream[IO, Unit] = {
-    Stream.eval(Ref[IO].of(0)).flatMap { count =>
+    Stream.eval(Ref[IO].of(Data(0, 0.milliseconds))).flatMap { data =>
       Stream.awakeEvery[IO](1.millisecond)
-        .evalMap(t => IO(println(s"Time elapsed is $t")) >> count.update(_ + 1))
+        .evalMap(t => data.update(data => Data(data.count + 1, t)))
         .interruptAfter(10.seconds)
-        .onFinalize(count.get.flatMap(count => IO(println(s"Final count is $count"))))
+        .onFinalize(data.get.flatMap(data =>
+          IO(println(s"Counted ${data.count} updates.\nTime elapsed is ${data.elapsed}."))
+        ))
     }
   }
 
