@@ -1,6 +1,7 @@
 package snippets
 
-import cats.effect.{Concurrent, IO, IOApp, Ref}
+import cats.effect.kernel.RefSource
+import cats.effect.{Concurrent, IO, IOApp}
 import cats.syntax.all._
 import fs2.Stream
 import fs2.concurrent.SignallingRef
@@ -13,7 +14,7 @@ object ConditionalProcessing extends IOApp.Simple {
     def processWhen[F2[x] >: F[x] : Concurrent]
     (
       f: O => O,
-      processWhenTrue: Ref[F2, Boolean]
+      processWhenTrue: RefSource[F2, Boolean]
     ): Stream[F2, O] =
       source.evalMap { o =>
         processWhenTrue.get.map { processWhenTrue =>
