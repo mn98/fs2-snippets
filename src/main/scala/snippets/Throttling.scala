@@ -21,7 +21,7 @@ object Throttling extends IOApp.Simple {
 
     Stream.exec(IO.println(s"Playback at speed ${factor}x ${if (chunked) "with" else "without"} chunks")) ++
       data
-        .through(TimeStamped.throttle[IO, Int](factor, 100.millis))
+        .through(TimeStamped.throttle[IO, Int](factor, 10.millis))
         .debug()
         .interruptAfter(10.seconds)
   }
