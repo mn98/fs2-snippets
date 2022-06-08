@@ -25,7 +25,7 @@ object Zipping extends IOApp.Simple {
       val chunks = legs.map(_.head)
       val elements = chunks.map(_.size).min
       if (elements > 0) {
-        val lists = for (i <- 0 until elements) yield chunks.map(_.apply(i))
+        val lists = (0 until elements).map(i => chunks.map(_.apply(i)))
         Pull.output(Chunk(lists: _*)) >>
           combine(legs.map(leg => leg.setHead(leg.head.drop(elements))))
       } else {
