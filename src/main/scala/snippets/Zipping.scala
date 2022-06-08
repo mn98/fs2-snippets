@@ -40,7 +40,10 @@ object Zipping extends IOApp.Simple {
 
     streams
       .traverse(_.pull.stepLeg)
-      .flatMap(legs => combine(legs.flatten))
+      .map(_.flatten)
+      .flatMap { legs =>
+        if (legs.size == nStreams) combine(legs) else Pull.done
+      }
       .stream
   }
 
@@ -49,7 +52,7 @@ object Zipping extends IOApp.Simple {
 
   val program: Stream[IO, Unit] = {
     val streams = List(
-      numbers(3).take(10),
+      numbers(3).take(0),
       numbers(5).take(11),
       numbers(5).take(12)
     )
