@@ -22,28 +22,26 @@ object Zipping extends IOApp.Simple {
     val nStreams = streams.size
 
     def combine(legs: List[Stream.StepLeg[F, A]]): Pull[F, List[A], Unit] = {
-      val chunks = legs.map(_.head)
-      val elements = chunks.map(_.size).min
-      if (elements > 0) {
-        val lists = (0 until elements).map(i => chunks.map(_.apply(i)))
-        Pull.output(Chunk(lists: _*)) >>
-          combine(legs.map(leg => leg.setHead(leg.head.drop(elements))))
-      } else {
-        legs
-          .traverse(leg => if (leg.head.isEmpty) leg.stepLeg else Pull.pure(Some(leg)))
-          .map(_.flatten)
-          .flatMap { legs =>
-            if (legs.size == nStreams) combine(legs) else Pull.done
-          }
+      if (legs.size < nStreams)
+        Pull.done
+      else {
+        val chunks = legs.map(_.head)
+        val elements = chunks.map(_.size).min
+        if (elements > 0) {
+          val lists = (0 until elements).map(i => chunks.map(_.apply(i)))
+          Pull.output(Chunk(lists: _*)) >>
+            combine(legs.map(leg => leg.setHead(leg.head.drop(elements))))
+        } else {
+          legs
+            .traverse(leg => if (leg.head.isEmpty) leg.stepLeg else Pull.pure(Some(leg)))
+            .flatMap(legs => combine(legs.flatten))
+        }
       }
     }
 
     streams
       .traverse(_.pull.stepLeg)
-      .map(_.flatten)
-      .flatMap { legs =>
-        if (legs.size == nStreams) combine(legs) else Pull.done
-      }
+      .flatMap(legs => combine(legs.flatten))
       .stream
   }
 
@@ -52,7 +50,7 @@ object Zipping extends IOApp.Simple {
 
   val program: Stream[IO, Unit] = {
     val streams = List(
-      numbers(3).take(0),
+      numbers(3).take(10),
       numbers(5).take(11),
       numbers(5).take(12)
     )
