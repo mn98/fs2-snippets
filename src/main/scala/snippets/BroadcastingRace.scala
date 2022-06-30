@@ -42,7 +42,7 @@ object BroadcastingRace extends IOApp.Simple {
           writes(state),
           reads(state)
         )
-        .onFinalize(IO(println("Finished the broadcasting race. Are you confused too?")))
+        .onFinalize(IO(println("Finished the broadcasting race.")))
     }
   }
 
