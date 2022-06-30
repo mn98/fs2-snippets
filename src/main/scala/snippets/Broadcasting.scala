@@ -5,7 +5,7 @@ import fs2.{Pipe, Stream}
 
 object Broadcasting extends IOApp.Simple {
 
-  val source: Stream[IO, Int] = Stream.emits(1 to 10).chunkLimit(1).unchunks
+  val source: Stream[IO, Int] = Stream.emits(1 to 10)
 
   val program: Stream[IO, Int] =
     Stream.eval(Ref.of[IO, Int](0)).flatMap { count =>
