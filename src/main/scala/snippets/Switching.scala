@@ -15,7 +15,7 @@ object Switching extends IOApp.Simple {
 
   val evens: Stream[IO, Int] = numbers(2, _ + 2)
 
-  val plusOrMinusOne: Stream[IO, Int] = numbers(1, _ * -1)
+  val plusOrMinusOne: Stream[IO, Int] = numbers(1, -_)
 
   override def run: IO[Unit] =
     for {
@@ -23,7 +23,7 @@ object Switching extends IOApp.Simple {
       stateTwo <- SignallingRef.of[IO, Option[Int]](None)
       _ <- {
         def output(i: Int): Stream[IO, Unit] = {
-          val state = if (i < 1) stateOne else stateTwo
+          val state = if (i < 0) stateOne else stateTwo
           state.discrete.unNone.evalMap(i => IO(println(s"$i")))
         }
 
