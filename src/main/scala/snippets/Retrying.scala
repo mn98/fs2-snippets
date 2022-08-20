@@ -3,8 +3,6 @@ package snippets
 import cats.effect.{IO, IOApp}
 import fs2.Stream
 
-import scala.concurrent.duration.DurationInt
-
 object Retrying extends IOApp.Simple {
 
   val program: Stream[IO, Unit] =
@@ -13,21 +11,23 @@ object Retrying extends IOApp.Simple {
       .evalMap(i => IO.println(s"$i")) ++
       Stream.eval(IO.raiseError(new RuntimeException(s"I have failed :-(")))
 
-  def resurrecting(s: Stream[IO, Unit]): Stream[IO, Unit] =
+  def retry(
+             s: Stream[IO, Unit],
+             numberOfTimes: Int
+           ): Stream[IO, Unit] =
     s
-      .attempt
-      .rethrow
       .handleErrorWith { throwable =>
-        Stream.exec(
-          IO.println(s"Error encountered: ${throwable.getMessage}") >>
-            IO.println("Retrying...")
-        ) ++
-          resurrecting(s)
+        Stream.exec(IO.println(s"Error encountered: ${throwable.getMessage}")) ++ {
+          val remaining = numberOfTimes - 1
+          if (remaining > 1)
+            Stream.exec(IO.println(s"Retries remaining: $remaining")) ++ retry(s, remaining)
+          else
+            Stream.exec(IO.println("No more retries allowed."))
+        }
       }
 
   override def run: IO[Unit] =
-    resurrecting(program)
-      .interruptAfter(30.seconds)
+    retry(program, 10)
       .compile
       .drain
 
