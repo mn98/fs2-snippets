@@ -19,7 +19,7 @@ object Retrying extends IOApp.Simple {
       .handleErrorWith { throwable =>
         Stream.exec(IO.println(s"Error encountered: ${throwable.getMessage}")) ++ {
           val remaining = numberOfTimes - 1
-          if (remaining > 1)
+          if (remaining > 0)
             Stream.exec(IO.println(s"Retries remaining: $remaining")) ++ retry(s, remaining)
           else
             Stream.exec(IO.println("No more retries allowed."))
