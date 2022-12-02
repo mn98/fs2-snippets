@@ -1,4 +1,4 @@
-package aoc
+package aoc2021
 
 import cats.effect.Ref
 import cats.effect.{IO, IOApp}

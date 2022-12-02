@@ -1,4 +1,4 @@
-package aoc
+package aoc2021
 
 import cats.effect.{IO, IOApp}
 import fs2.io.file.{Files, Flags, Path}

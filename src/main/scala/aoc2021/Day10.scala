@@ -1,4 +1,4 @@
-package aoc
+package aoc2021
 
 import cats.effect.IO
 import cats.effect.kernel.{Concurrent, Ref}

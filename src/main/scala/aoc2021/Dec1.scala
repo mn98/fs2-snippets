@@ -1,4 +1,4 @@
-package aoc
+package aoc2021
 
 import cats.effect.{IO, Ref}
 import fs2.Stream

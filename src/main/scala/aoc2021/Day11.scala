@@ -1,6 +1,6 @@
-package aoc
+package aoc2021
 
-import aoc.Day11.Octopuses.EnergyMap
+import aoc2021.Day11.Octopuses.EnergyMap
 import cats.effect.IO
 import cats.effect.kernel.{Ref, Sync}
 import cats.syntax.all._
