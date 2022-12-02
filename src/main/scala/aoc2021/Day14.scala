@@ -1,5 +1,6 @@
 package aoc2021
 
+import aoc.AOCApp
 import cats.effect.kernel.Ref
 import cats.effect.{IO, Sync}
 import cats.syntax.all._

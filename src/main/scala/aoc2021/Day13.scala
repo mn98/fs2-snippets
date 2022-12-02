@@ -1,5 +1,6 @@
 package aoc2021
 
+import aoc.AOCApp
 import cats.effect.IO
 import cats.effect.kernel.Ref
 import fs2.Stream

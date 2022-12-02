@@ -1,9 +1,10 @@
 package aoc2022
 
+import aoc.AOCApp
 import cats.effect.{IO, Ref}
 import fs2.Stream
 
-object Dec1 extends AOCApp {
+object Day1 extends AOCApp {
 
   override def inputFileName: String = "AOC_2022_1.txt"
 
