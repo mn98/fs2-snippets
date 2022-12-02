@@ -12,7 +12,7 @@ object Day1 extends AOCApp {
 
   override def part2: fs2.Stream[IO, Unit] = calorieCounter(3)
 
-  def calorieCounter(numberOfElves: Int): Stream[IO, Unit] =
+  private def calorieCounter(numberOfElves: Int): Stream[IO, Unit] =
     Stream.eval(Ref[IO].of(Set.empty[Long])).flatMap { maxCalories =>
       Stream.eval(Ref[IO].of(0L)).flatMap { calories =>
         input.evalMap { line =>
