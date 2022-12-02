@@ -16,24 +16,21 @@ object Day1 extends AOCApp {
     Stream.eval(Ref[IO].of(Set.empty[Long])).flatMap { maxCalories =>
       Stream.eval(Ref[IO].of(0L)).flatMap { calories =>
         input.evalMap { line =>
-          if (line.isEmpty) {
+          if line.isEmpty then
             calories.get.flatMap { calories =>
               maxCalories.update { maxCalories =>
-                if (maxCalories.size < numberOfElves)
+                if maxCalories.size < numberOfElves then
                   maxCalories + calories
-                else {
+                else
                   val smallest = maxCalories.min
-                  if (calories > smallest) {
+                  if calories > smallest then
                     (maxCalories - smallest) + calories
-                  } else {
+                  else
                     maxCalories
-                  }
-                }
               }
             } >> calories.set(0)
-          } else {
+          else
             calories.update(_ + line.toLong)
-          }
         }
           .onFinalize {
             maxCalories.get.flatMap { maxCalories =>
