@@ -2,7 +2,7 @@ name := "fs2-snippets"
 
 version := "0.1"
 
-scalaVersion := "2.13.6"
+scalaVersion := "3.2.1"
 
 val fs2Version = "3.4.0"
 

@@ -113,7 +113,7 @@ object Day9 extends AOCApp {
                         (if (neighbours.nonEmpty) Some(neighbours) else None)
                     }
                   }
-                  discovery.drain ++ Stream.eval(basinPoints.get.map(HeightMap.Basin))
+                  discovery.drain ++ Stream.eval(basinPoints.get.map(HeightMap.Basin.apply))
                 }
 
               Stream
