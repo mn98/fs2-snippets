@@ -8,19 +8,22 @@ object Day6 extends AOCApp {
 
   override def inputFileName: String = "AOC_2022_6.txt"
 
-  override def part1: Stream[IO, Unit] =
+  override def part1: Stream[IO, Unit] = findMarker(4)
+
+  override def part2: Stream[IO, Unit] = findMarker(14)
+
+  def findMarker(markerSize: Int): Stream[IO, Unit] =
     input.flatMap { line =>
       Stream
         .emits(line.toCharArray.toSeq)
-        .sliding(4)
+        .sliding(markerSize)
         .zipWithIndex
-        .filter((chars, _) => chars.toList.distinct.size == 4)
+        .takeWhile((chars, _) => chars.toList.distinct.size < markerSize, true)
+        .filter((chars, _) => chars.toList.distinct.size == markerSize)
         .evalMap { (chars, index) =>
-          val markerIndex = index + 4
+          val markerIndex = index + markerSize
           IO.println(s"Unique chars are ${chars.toList.mkString}, they arrive after index $markerIndex")
         }
     }
-
-  override def part2: Stream[IO, Unit] = Stream.empty
 
 }
