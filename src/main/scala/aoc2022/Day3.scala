@@ -32,9 +32,8 @@ object Day3 extends AOCApp {
           itemCollections
             .map(_.toCharArray.toSet)
             .reduce(_ intersect _)
-            .headOption.traverse_ { commonItem =>
-            prioritySum.update(_ + itemPriority(commonItem))
-          }
+            .headOption
+            .traverse_(commonItem => prioritySum.update(_ + itemPriority(commonItem)))
         }
         .onFinalize {
           prioritySum.get.flatMap { prioritySum =>
