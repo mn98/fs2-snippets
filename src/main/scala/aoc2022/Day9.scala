@@ -67,7 +67,6 @@ object Day9 extends AOCApp {
 
   override def part1: Stream[IO, Unit] = go(2)
 
-  // 2528 is too low
   override def part2: Stream[IO, Unit] = go(10)
 
   private def go(numberOfKnots: Int): Stream[IO, Unit] =
