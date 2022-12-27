@@ -76,54 +76,47 @@ object Day11 extends AOCApp {
 
   private def play(
                     monkeys: Monkeys,
-                    relieve: BigInt => BigInt
-                  ): IO[Unit] = {
-    monkeys.update { monkeys =>
-      monkeys.indices.foldLeft(monkeys) { case (monkeys, i) =>
-        val monkey = monkeys(i)
-        monkey.items.foldLeft(monkeys) { (monkeys, item) =>
-          val updatedItem = relieve(monkey.operation(item))
-          val j = monkey.throwItem(updatedItem)
-          val monkey_j = monkeys(j)
-          monkeys
-            .updated(j, monkey_j.copy(items = monkey_j.items :+ updatedItem))
+                    relieve: BigInt => BigInt,
+                    numberOfRounds: Int,
+                  ): Stream[IO, Unit] = {
+    Stream
+      .eval {
+        monkeys.update { monkeys =>
+          monkeys.indices.foldLeft(monkeys) { case (monkeys, i) =>
+            val monkey = monkeys(i)
+            monkey.items.foldLeft(monkeys) { (monkeys, item) =>
+              val updatedItem = relieve(monkey.operation(item))
+              val j = monkey.throwItem(updatedItem)
+              val monkey_j = monkeys(j)
+              monkeys
+                .updated(j, monkey_j.copy(items = monkey_j.items :+ updatedItem))
+            }
+              .updated(i, monkey.copy(items = Seq.empty, inspected = monkey.inspected + monkey.items.size))
+          }
         }
-          .updated(i, monkey.copy(items = Seq.empty, inspected = monkey.inspected + monkey.items.size))
       }
-    }
+      .repeatN(numberOfRounds)
+      .onFinalize {
+        monkeys.get.flatMap { monkeys =>
+          val monkeyBiz = monkeys.map(_.inspected).sorted.takeRight(2).product
+          IO.println(s"Monkeys\n${monkeys.map(_.status).mkString("\n")}") >>
+            IO.println(s"Monkey business is $monkeyBiz")
+        }
+      }
   }
 
   override def part1: Stream[IO, Unit] =
     Stream.eval(Ref[IO].of(Seq.empty[Monkey])).flatMap { monkeys =>
       Stream.eval(readMonkeys(monkeys)) ++
-        Stream
-          .eval(play(monkeys, _ / 3))
-          .repeatN(20)
-          .onFinalize {
-            monkeys.get.flatMap { monkeys =>
-              val monkeyBiz = monkeys.map(_.inspected).sorted.takeRight(2).product
-              IO.println(s"Monkeys\n${monkeys.map(_.status).mkString("\n")}") >>
-                IO.println(s"Monkey business is $monkeyBiz")
-            }
-          }
+        play(monkeys, _ / 3, 20)
     }
 
   override def part2: Stream[IO, Unit] =
     Stream.eval(Ref[IO].of(Seq.empty[Monkey])).flatMap { monkeys =>
       Stream.eval(readMonkeys(monkeys)) ++
         Stream.eval(monkeys.get.map(_.map(_.testFactor.toLong).product)).flatMap { commonDenominator =>
-          Stream
-            .eval(play(monkeys, _ % commonDenominator))
-            .repeatN(10000)
-            .onFinalize {
-              monkeys.get.flatMap { monkeys =>
-                val monkeyBiz = monkeys.map(_.inspected).sorted.takeRight(2).product
-                IO.println(s"Monkeys\n${monkeys.map(_.status).mkString("\n")}") >>
-                  IO.println(s"Monkey business is $monkeyBiz")
-              }
-            }
+          play(monkeys, _ % commonDenominator, 10000)
         }
     }
-
 
 }
