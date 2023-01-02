@@ -58,25 +58,29 @@ object Day12 extends AOCApp {
     /**
      * This works but needs improving in all sorts of ways...
      */
-    def shortestDistances(from: Coordinate): Seq[(Point, Int)] = {
+    def shortestDistances(from: Coordinate, to: Coordinate): Seq[(Point, Int)] = {
 
       val queue = ArrayBuffer.from(points.map(_.coordinate -> Int.MaxValue))
       queue(queue.indexOf(queue.find(_._1 == from).get)) = from -> 0
 
       val distances = ArrayBuffer.from(points.map(point => if (point.coordinate != from) Int.MaxValue else 0))
 
-      while (queue.nonEmpty) {
-        val (closest, _) = queue.remove(queue.indexOf(queue.minBy(_._2)))
-        val closestIdx = (closest.r * columnLimit) + closest.c
-        val neighbours = graph(closestIdx)
-        neighbours.foreach { neighbour =>
-          val neighbourIdx = (neighbour.r * columnLimit) + neighbour.c
-          val closestDistance = distances(closestIdx) + 1
-          val alternative = if closestDistance < Int.MaxValue then distances(closestIdx) + 1 else Int.MaxValue
-          if (alternative < distances(neighbourIdx)) {
-            distances(neighbourIdx) = alternative
-            queue.find(_._1 == neighbour).foreach { x =>
-              queue(queue.indexOf(x)) = neighbour -> alternative
+      breakable {
+        while (queue.nonEmpty) {
+          val (closest, _) = queue.remove(queue.indexOf(queue.minBy(_._2)))
+          if closest == to then break
+          val closestIdx = (closest.r * columnLimit) + closest.c
+          val closestDistance = distances(closestIdx)
+          if closestDistance == Int.MaxValue then break
+          val alternative = closestDistance + 1
+          val neighbours = graph(closestIdx).filter(n => queue.exists((c, _) => c == n))
+          neighbours.foreach { neighbour =>
+            val neighbourIdx = (neighbour.r * columnLimit) + neighbour.c
+            if (alternative < distances(neighbourIdx)) {
+              distances(neighbourIdx) = alternative
+              queue.find(_._1 == neighbour).foreach { x =>
+                queue(queue.indexOf(x)) = neighbour -> alternative
+              }
             }
           }
         }
@@ -136,16 +140,18 @@ object Day12 extends AOCApp {
       Stream.eval(Ref[IO].of(Set.empty[Coordinate])).flatMap { starts =>
         Stream.eval(Ref[IO].of(Coordinate(0, 0))).flatMap { end =>
           read(grid, startingPoint, starts, end) ++
-            Stream.eval(starts.get.flatMap { starts =>
-              grid
-                .get
-                .map(grid => starts.map(grid.shortestDistances))
-                .flatMap { distances =>
-                  end.get.map { end =>
-                    distances.map(_.find(_._1.coordinate == end)).toSeq.sortBy(_.map(_._2))
-                  }
+            Stream.eval(
+              starts.get.flatMap { starts =>
+                end.get.flatMap { end =>
+                  grid
+                    .get
+                    .map(grid => starts.map(grid.shortestDistances(_, end)))
+                    .map { distances =>
+                      distances.map(_.find(_._1.coordinate == end)).toSeq.sortBy(_.map(_._2))
+                    }
                 }
-            }).debug(_.mkString("\n")).drain
+              }
+            ).debug(_.mkString("\n")).drain
         }
       }
     }
