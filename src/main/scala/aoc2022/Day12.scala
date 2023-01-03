@@ -60,10 +60,9 @@ object Day12 extends AOCApp {
      */
     def shortestDistances(from: Coordinate, to: Coordinate): Seq[(Point, Int)] = {
 
-      val queue = ArrayBuffer.from(points.map(_.coordinate -> Int.MaxValue))
-      queue(queue.indexOf(queue.find(_._1 == from).get)) = from -> 0
+      val queue = ArrayBuffer.from(points.map(p => p.coordinate -> (if p.coordinate != from then Int.MaxValue else 0)))
 
-      val distances = ArrayBuffer.from(points.map(point => if (point.coordinate != from) Int.MaxValue else 0))
+      val distances = ArrayBuffer.from(points.map(p => if (p.coordinate != from) Int.MaxValue else 0))
 
       breakable {
         while (queue.nonEmpty) {
