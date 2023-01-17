@@ -4,7 +4,7 @@ version := "0.1"
 
 scalaVersion := "3.2.1"
 
-val fs2Version = "3.4.0"
+val fs2Version = "3.5.0"
 
 libraryDependencies ++= Seq(
   "co.fs2" %% "fs2-core" % fs2Version,
