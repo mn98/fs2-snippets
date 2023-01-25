@@ -7,9 +7,9 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object Restarting extends IOApp.Simple {
 
-  val spawner: Stream[IO, FiniteDuration] = Stream.awakeEvery[IO](5.seconds)
+  private val spawner: Stream[IO, FiniteDuration] = Stream.awakeEvery[IO](5.seconds)
 
-  val counter: Stream[IO, Int] = Stream.unfold(0)(i => Some(i -> (i + 1)))
+  private val counter: Stream[IO, Int] = Stream.unfold(0)(i => Some(i -> (i + 1)))
 
   override def run: IO[Unit] =
     spawner
