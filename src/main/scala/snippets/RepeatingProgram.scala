@@ -13,7 +13,10 @@ object RepeatingProgram extends IOApp.Simple {
     config.flatMap { config =>
       val program =
         Stream.eval(IO(println(s"Running with configuration: $config"))) ++
-          Stream.awakeEvery[IO](2.seconds).evalMap(age => IO(println(s"Time elapsed is $age")))
+          Stream
+            .awakeEvery[IO](1.second)
+            .evalMap(age => IO(println(s"Time elapsed is $age")))
+            .interruptAfter(10.seconds)
 
       program.compile.drain
     }
