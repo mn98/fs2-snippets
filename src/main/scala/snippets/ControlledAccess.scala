@@ -9,10 +9,35 @@ import scala.concurrent.duration.DurationInt
 
 object ControlledAccess extends IOApp.Simple {
 
+  /**
+   * A wrapper for evaluating effects of an effectual object of type `T[F, A]` in a controlled fashion.
+   * Implementors of `access` determine how that control works.
+   *
+   * @tparam F The effect type.
+   * @tparam T The effectual type.
+   * @tparam A The value type contained by the effectual type.
+   */
   trait Controlled[F[_], T[_[_], _], A]:
+    /**
+     *
+     * @param f An effect on the controlled object.
+     * @tparam B The result type from running the supplied effect.
+     * @return The result of running the supplied effect in the effect type `F`.
+     */
     def access[B](f: T[F, A] => F[B]): F[B]
 
   object Controlled:
+    /**
+     * Controlled access for concurrent effects.
+     * A `Supervisor` is used to limit the maximum allowed concurrency.
+     *
+     * @param a An effect that produces the object to be controlled.
+     * @param n The maximum allowed number of concurrent accesses.
+     * @tparam F The effect type.
+     * @tparam T The effectual type.
+     * @tparam A The value type contained by the effectual type.
+     * @return A controlled access wrapper for the supplied `T`.
+     */
     def apply[F[_] : Concurrent, T[_[_], _], A](
                                                  a: F[T[F, A]],
                                                  n: Int
