@@ -56,11 +56,12 @@ object Accessor:
 
 object ControlledAccess extends IOApp.Simple {
 
-  private def parallelIncrements(c: Accessor[IO, Ref, Int], n: Int): IO[Unit] =
-    List.fill(n)(c.access(_.updateAndGet(_ + 1).debug() >> IO.sleep(1.second))).parSequence_
+  private def debugParallelIncrements(c: Accessor[IO, Ref, Int], n: Int, prefix: String): IO[Unit] =
+    List.fill(n)(c.access(_.updateAndGet(_ + 1).debug(prefix) >> IO.sleep(1.second))).parSequence_
 
   override def run: IO[Unit] =
-    Accessor.atomic(Ref[IO].of(0)).flatMap(parallelIncrements(_, 5)) >>
-    Accessor.atomicRef[IO, Int](0).flatMap(parallelIncrements(_, 5)) >>
-      Accessor.ref[IO, Int](0, 4).flatMap(parallelIncrements(_, 20))
+    Accessor.atomic(Ref[IO].of(0)).flatMap(debugParallelIncrements(_, 5, "Test 1")) >>
+      Accessor(Ref[IO].of(0), 4).flatMap(debugParallelIncrements(_, 20, "Test 2")) >>
+      Accessor.atomicRef[IO, Int](0).flatMap(debugParallelIncrements(_, 5, "Test 3")) >>
+      Accessor.ref[IO, Int](0, 4).flatMap(debugParallelIncrements(_, 20, "Test 4"))
 }
