@@ -14,7 +14,7 @@ object Switch:
   def apply[F[_] : Concurrent](s: State): F[Switch[F]] = SignallingRef(s == State.On)
 
 extension[F[_] : Functor] (s: Switch[F])
-  def state: F[Switch.State] = s.get.map(s => if (s) Switch.State.On else Switch.State.Off)
+  def state: F[Switch.State] = s.get.map(if (_) Switch.State.On else Switch.State.Off)
   def isOn: F[Boolean] = state.map(_ == Switch.State.On)
   def isOff: F[Boolean] = state.map(_ == Switch.State.Off)
   def switchOn: F[Unit] = s.set(true)
