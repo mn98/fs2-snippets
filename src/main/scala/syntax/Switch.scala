@@ -8,11 +8,10 @@ import fs2.concurrent.{Signal, SignallingRef}
 opaque type Switch[F[_]] = SignallingRef[F, Boolean]
 
 object Switch:
-  enum State(val value: Boolean):
-    case On extends State(true)
-    case Off extends State(false)
+  enum State:
+    case On, Off
 
-  def apply[F[_] : Concurrent](s: State): F[Switch[F]] = SignallingRef.of(s.value)
+  def apply[F[_] : Concurrent](s: State): F[Switch[F]] = SignallingRef(s == State.On)
 
 extension[F[_] : Functor] (s: Switch[F])
   def state: F[Switch.State] = s.get.map(s => if (s) Switch.State.On else Switch.State.Off)
