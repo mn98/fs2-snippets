@@ -20,4 +20,5 @@ extension[F[_] : Functor] (s: Switch[F])
   def switchOn: F[Unit] = s.set(true)
   def switchOff: F[Unit] = s.set(false)
   def flip: F[Unit] = s.update(!_)
-  implicit def asSignal: Signal[F, Boolean] = s
+
+given[F[_]]: Conversion[Switch[F], Signal[F, Boolean]] = s => s

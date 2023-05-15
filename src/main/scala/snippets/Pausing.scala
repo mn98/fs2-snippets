@@ -3,8 +3,7 @@ package snippets
 import cats.effect.{IO, IOApp}
 import fs2.Stream
 import fs2.concurrent.SignallingRef
-import syntax.*
-
+import syntax.{*, given}
 import scala.concurrent.duration.DurationInt
 
 object Pausing extends IOApp.Simple {
