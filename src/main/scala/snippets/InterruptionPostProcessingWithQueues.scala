@@ -1,8 +1,8 @@
 package snippets
 
-import cats.effect.std.Queue
+import cats.effect.std.{Queue, Random}
 import cats.effect.{IO, IOApp}
-import cats.implicits._
+import cats.syntax.all.*
 import fs2.concurrent.SignallingRef
 import fs2.{Pipe, Stream}
 
@@ -11,8 +11,6 @@ import scala.concurrent.duration.DurationInt
 object InterruptionPostProcessingWithQueues extends IOApp.Simple {
 
   def run: IO[Unit] = {
-    val s1 = Stream.repeatEval(IO.sleep(100.millis) >> IO(scala.util.Random.nextInt(10)))
-    val s2 = Stream.repeatEval(IO.sleep(50.millis) >> IO(scala.util.Random.nextInt(10)))
 
     val f: Pipe[IO, Int, Unit] =
       _.evalMap { x =>
@@ -20,10 +18,14 @@ object InterruptionPostProcessingWithQueues extends IOApp.Simple {
         IO.println(s"got $x") >> IO.sleep(50.millis) >> IO.println(s"After sleep $x")
       }
 
-    (Queue.unbounded[IO, Option[Int]], SignallingRef[IO, Boolean](false)).tupled.flatMap { case (q, signal) =>
+    (
+      Queue.unbounded[IO, Option[Int]],
+      SignallingRef[IO, Boolean](false),
+      Random.scalaUtilRandom[IO]
+    ).tupled.flatMap { case (q, signal, rng) =>
+      val ints = Stream.repeatEval(rng.betweenInt(0, 10))
       val p1 =
-        s1
-          .merge(s2)
+        (ints.metered(100.millis) merge ints.metered(50.millis))
           .evalTap(x => signal.set(true).whenA(x === 7))
           .evalTap(x => q.offer(x.some)) // offering after signal is set to simulate real case
           .interruptWhen(signal)

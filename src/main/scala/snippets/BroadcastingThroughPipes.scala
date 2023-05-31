@@ -1,36 +1,35 @@
 package snippets
 
 import cats.effect.kernel.Ref
-import cats.effect.std.Queue
+import cats.effect.std.{Queue, Random}
 import cats.effect.{ExitCode, IO, IOApp}
-import cats.implicits._
+import cats.syntax.all.*
 import fs2.{Pipe, Stream}
 
 import scala.concurrent.duration.DurationInt
-import scala.util.Random
 
 object BroadcastingThroughPipes extends IOApp {
 
-  def pipeA(
+  private def pipeA(
              state: Ref[IO, Boolean],
-             changes: Queue[IO, Int]
-           ): Pipe[IO, (Int, Int), Unit] = {
+             changes: Queue[IO, Long]
+           ): Pipe[IO, (Int, Long), Unit] = {
     in =>
       in
         .chunkN(2, allowFewer = false)
         .evalMap { e =>
-          val (i, v) = e.last.get
+          val (v, i) = e.last.get
           (state.set(true) >> changes.offer(i)).whenA(v > 50) >>
             IO(println(s"A: ${e.last}"))
         }
   }
 
-  def pipeB(
+  private def pipeB(
              state: Ref[IO, Boolean]
-           ): Pipe[IO, (Int, Int), Unit] = {
+           ): Pipe[IO, (Int, Long), Unit] = {
     in =>
       in.evalMap { e =>
-        val (_, v) = e
+        val (v, _) = e
         IO.sleep(1.second) >>
           IO(println(s"B: $e")) >>
           state.get.flatMap(b => IO(println(s"State: $b"))) >>
@@ -40,14 +39,14 @@ object BroadcastingThroughPipes extends IOApp {
 
   val program: Stream[IO, Unit] =
     for {
-      rng <- Stream.eval(IO(new Random(19791205)))
+      rng <- Stream.eval(Random.scalaUtilRandomSeedLong[IO](19791205))
       state <- Stream.eval(Ref.of[IO, Boolean](false))
-      changes <- Stream.eval(Queue.unbounded[IO, Int])
+      changes <- Stream.eval(Queue.unbounded[IO, Long])
       _ <-
         Stream
-          .range(0, 10)
-          .covary[IO]
-          .map(i => i -> rng.nextInt(100))
+          .eval(rng.betweenInt(0, 100))
+          .repeatN(10)
+          .zipWithIndex
           .broadcastThrough(
             pipeA(state, changes),
             pipeB(state)
