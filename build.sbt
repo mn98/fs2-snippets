@@ -2,9 +2,9 @@ name := "fs2-snippets"
 
 version := "0.1"
 
-scalaVersion := "3.2.2"
+scalaVersion := "3.3.0"
 
-val fs2Version = "3.6.1"
+val fs2Version = "3.7.0"
 
 libraryDependencies ++= Seq(
   "co.fs2" %% "fs2-core" % fs2Version,
