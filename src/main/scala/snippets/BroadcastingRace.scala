@@ -3,7 +3,7 @@ package snippets
 import cats.effect.kernel.Ref
 import cats.effect.{IO, IOApp}
 import cats.syntax.all.*
-import fs2.{Pipe, Pull, Stream}
+import fs2.{Pipe, Stream}
 import syntax.*
 
 object BroadcastingRace extends IOApp.Simple {
@@ -16,7 +16,7 @@ object BroadcastingRace extends IOApp.Simple {
 
   def reads(state: Ref[IO, T]): Pipe[IO, T, T] = _.evalTap { t =>
     state.get.flatMap { s =>
-      IO(println(s"state $s is greater than current element $t")).whenA(s > t)
+      IO.println(s"state $s is greater than current element $t").whenA(s > t)
     }
   }
 
@@ -27,9 +27,9 @@ object BroadcastingRace extends IOApp.Simple {
         .unchunks
         .broadcastThrough(
           writes(state),
-          reads(state)
+          reads(state),
         )
-        .onFinalize(IO(println("Finished the broadcasting race.")))
+        .onFinalize(IO.println("Finished the broadcasting race."))
     }
   }
 
