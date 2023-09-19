@@ -41,9 +41,9 @@ object Accessor:
                                                n: Int
                                              ): F[Accessor[F, T, A]] =
     Semaphore[F](n).flatMap { semaphore =>
-      a.map { ar =>
+      a.map { a =>
         new Accessor[F, T, A] {
-          override def access[B](f: T[F, A] => F[B]): F[B] = semaphore.permit.surround(f(ar))
+          override def access[B](f: T[F, A] => F[B]): F[B] = semaphore.permit.surround(f(a))
         }
       }
     }
