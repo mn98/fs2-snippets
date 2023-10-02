@@ -75,7 +75,7 @@ object Worker:
    * @tparam F The effect type.
    * @return A worker.
    */
-  def channelling[F[_] : Concurrent]: Resource[F, Worker[F]] =
+  def sequential[F[_] : Concurrent]: Resource[F, Worker[F]] =
     Supervisor(false).evalMap { supervisor =>
       Channel.unbounded[F, F[Boolean]].flatMap { channel =>
         val worker: Worker[F] = new Worker[F] {
@@ -124,4 +124,4 @@ object WorkerTest extends IOApp.Simple:
   override def run: IO[Unit] =
   //    Worker.dropping[IO](3).flatMap(program) >>
   //      Worker.queueing[IO](3).flatMap(program) >>
-    Worker.channelling[IO].use(program)
+    Worker.sequential[IO].use(program)
