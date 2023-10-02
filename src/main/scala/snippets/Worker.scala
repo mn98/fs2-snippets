@@ -122,6 +122,6 @@ object WorkerTest extends IOApp.Simple:
     }
 
   override def run: IO[Unit] =
-  //    Worker.dropping[IO](3).flatMap(program) >>
-  //      Worker.queueing[IO](3).flatMap(program) >>
-    Worker.sequential[IO].use(program)
+    IO.println("A dropping worker") >> Worker.dropping[IO](3).flatMap(program) >>
+      IO.println("A queueing worker") >> Worker.queueing[IO](3).flatMap(program) >>
+      IO.println("A sequential worker") >> Worker.sequential[IO].use(program)
