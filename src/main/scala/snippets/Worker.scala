@@ -32,8 +32,8 @@ object Worker:
    * @tparam F The effect type.
    * @return A worker.
    */
-  def dropping[F[_] : Concurrent](max: Int): F[Worker[F]] =
-    Supervisor(false).use { supervisor =>
+  def dropping[F[_] : Concurrent](max: Int): Resource[F, Worker[F]] =
+    Supervisor(false).evalMap { supervisor =>
       Queue.dropping[F, Unit](max).map { q =>
         new Worker[F] {
           def submit[A](task: F[A]): F[Option[DeferredSource[F, A]]] =
@@ -57,8 +57,8 @@ object Worker:
    * @tparam F The effect type.
    * @return A worker.
    */
-  def queueing[F[_] : Concurrent](max: Int): F[Worker[F]] =
-    Supervisor(false).use { supervisor =>
+  def queueing[F[_] : Concurrent](max: Int): Resource[F, Worker[F]] =
+    Supervisor(false).evalMap { supervisor =>
       Semaphore[F](max).map { s =>
         new Worker[F] {
           def submit[A](task: F[A]): F[Option[DeferredSource[F, A]]] =
@@ -122,6 +122,6 @@ object WorkerTest extends IOApp.Simple:
     }
 
   override def run: IO[Unit] =
-    IO.println("A dropping worker") >> Worker.dropping[IO](3).flatMap(program) >>
-      IO.println("A queueing worker") >> Worker.queueing[IO](3).flatMap(program) >>
+    IO.println("A dropping worker") >> Worker.dropping[IO](3).use(program) >>
+      IO.println("A queueing worker") >> Worker.queueing[IO](3).use(program) >>
       IO.println("A sequential worker") >> Worker.sequential[IO].use(program)
