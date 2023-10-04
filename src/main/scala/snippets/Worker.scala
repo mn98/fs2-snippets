@@ -70,7 +70,7 @@ object Worker:
     }
 
   /**
-   * A worker that executes all submitted tasks sequentially on the same fibre.
+   * A worker that executes all submitted tasks sequentially.
    *
    * @tparam F The effect type.
    * @return A worker.
