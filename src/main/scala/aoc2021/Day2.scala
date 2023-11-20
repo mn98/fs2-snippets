@@ -1,11 +1,9 @@
 package aoc2021
 
 import cats.effect.{IO, IOApp, Ref}
-import cats.syntax.all._
-import fs2.{Stream, text}
+import cats.syntax.all.*
 import fs2.io.file.{Files, Flags, Path}
-
-import java.nio.file.Paths
+import fs2.{Stream, text}
 
 object Day2 extends IOApp.Simple {
 
@@ -19,7 +17,7 @@ object Day2 extends IOApp.Simple {
 
   val input: fs2.Stream[IO, Command] =
     Files[IO]
-      .readAll(Path.fromNioPath(Paths.get(s"${System.getenv("HOME")}/Documents/AOC_2_input.txt")), 1024, Flags.Read)
+      .readAll(Path(getClass.getResource("/aoc/AOC_2_input.txt").getPath), 1024, Flags.Read)
       .through(text.utf8.decode andThen text.lines)
       .filterNot(_.isEmpty)
       .map { line =>
@@ -34,12 +32,12 @@ object Day2 extends IOApp.Simple {
   val program1: Stream[IO, Unit] =
     Stream.eval(Ref.of[IO, Position](Position(0, 0, 0))).flatMap { position =>
       input.evalMap { command =>
-        command.direction match {
-          case Command.Direction.forward => position.update(p => p.copy(horizontal = p.horizontal + command.distance))
-          case Command.Direction.up => position.update(p => p.copy(depth = p.depth - command.distance))
-          case Command.Direction.down => position.update(p => p.copy(depth = p.depth + command.distance))
+          command.direction match {
+            case Command.Direction.forward => position.update(p => p.copy(horizontal = p.horizontal + command.distance))
+            case Command.Direction.up => position.update(p => p.copy(depth = p.depth - command.distance))
+            case Command.Direction.down => position.update(p => p.copy(depth = p.depth + command.distance))
+          }
         }
-      }
         .onFinalize(position.get.flatMap { p =>
           IO(println(s"Position is $p with a product of ${p.horizontal * p.depth}"))
         })
@@ -48,17 +46,17 @@ object Day2 extends IOApp.Simple {
   val program2: Stream[IO, Unit] =
     Stream.eval(Ref.of[IO, Position](Position(0, 0, 0))).flatMap { position =>
       input.evalMap { command =>
-        command.direction match {
-          case Command.Direction.forward => position.update(p =>
-            p.copy(
-              horizontal = p.horizontal + command.distance,
-              depth = p.depth + p.aim * command.distance
+          command.direction match {
+            case Command.Direction.forward => position.update(p =>
+              p.copy(
+                horizontal = p.horizontal + command.distance,
+                depth = p.depth + p.aim * command.distance
+              )
             )
-          )
-          case Command.Direction.up => position.update(p => p.copy(aim = p.aim - command.distance))
-          case Command.Direction.down => position.update(p => p.copy(aim = p.aim + command.distance))
+            case Command.Direction.up => position.update(p => p.copy(aim = p.aim - command.distance))
+            case Command.Direction.down => position.update(p => p.copy(aim = p.aim + command.distance))
+          }
         }
-      }
         .onFinalize(position.get.flatMap { p =>
           IO(println(s"Position is $p with a product of ${p.horizontal * p.depth}"))
         })

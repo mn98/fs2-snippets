@@ -2,11 +2,9 @@ package aoc2021
 
 import cats.effect.kernel.Ref
 import cats.effect.{IO, IOApp}
-import cats.syntax.all._
+import cats.syntax.all.*
 import fs2.io.file.{Files, Flags, Path}
 import fs2.{Stream, text}
-
-import java.nio.file.Paths
 
 object Day5 extends IOApp.Simple {
 
@@ -22,7 +20,7 @@ object Day5 extends IOApp.Simple {
 
   val input: Stream[IO, String] =
     Files[IO]
-      .readAll(Path.fromNioPath(Paths.get(s"${System.getenv("HOME")}/Documents/AOC_5_input.txt")), 1024, Flags.Read)
+      .readAll(Path(getClass.getResource("/aoc/AOC_5_input.txt").getPath), 1024, Flags.Read)
       .through(text.utf8.decode andThen text.lines)
       .filterNot(_.isEmpty)
 
@@ -40,30 +38,30 @@ object Day5 extends IOApp.Simple {
 
     Stream.eval(Ref[IO].of(Map.empty[Coord, Int])).flatMap { counter =>
       lines.debug().evalMap { line =>
-        val coords: Seq[Coord] = {
-          if (line.isVertical) {
-            val range = if (line.c1.y < line.c2.y) line.c1.y to line.c2.y else line.c2.y to line.c1.y
-            range.map(y => Coord(line.c1.x, y))
+          val coords: Seq[Coord] = {
+            if (line.isVertical) {
+              val range = if (line.c1.y < line.c2.y) line.c1.y to line.c2.y else line.c2.y to line.c1.y
+              range.map(y => Coord(line.c1.x, y))
+            }
+            else if (line.isHorizontal) {
+              val range = if (line.c1.x < line.c2.x) line.c1.x to line.c2.x else line.c2.x to line.c1.x
+              range.map(x => Coord(x, line.c1.y))
+            }
+            else if (line.isDiagonal) {
+              val xIncrement = if (line.c1.x < line.c2.x) 1 else -1
+              val xRange = line.c1.x to line.c2.x by xIncrement
+              val yIncrement = if (line.c1.y < line.c2.y) 1 else -1
+              val yRange = line.c1.y to line.c2.y by yIncrement
+              (xRange zip yRange).map { case (x, y) => Coord(x, y) }
+            }
+            else Nil
           }
-          else if (line.isHorizontal) {
-            val range = if (line.c1.x < line.c2.x) line.c1.x to line.c2.x else line.c2.x to line.c1.x
-            range.map(x => Coord(x, line.c1.y))
+          counter.update { counter =>
+            coords.foldLeft(counter) { (counter, coord) =>
+              counter.updated(coord, counter.getOrElse(coord, 0) + 1)
+            }
           }
-          else if (line.isDiagonal) {
-            val xIncrement = if (line.c1.x < line.c2.x) 1 else -1
-            val xRange = line.c1.x to line.c2.x by xIncrement
-            val yIncrement = if (line.c1.y < line.c2.y) 1 else -1
-            val yRange = line.c1.y to line.c2.y by yIncrement
-            (xRange zip yRange).map { case (x, y) => Coord(x, y) }
-          }
-          else Nil
         }
-        counter.update { counter =>
-          coords.foldLeft(counter) { (counter, coord) =>
-            counter.updated(coord, counter.getOrElse(coord, 0) + 1)
-          }
-        }
-      }
         .onFinalize {
           counter.get.flatMap { counter =>
             val count = counter.count(_._2 > 1)

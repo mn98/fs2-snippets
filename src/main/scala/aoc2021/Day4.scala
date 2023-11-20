@@ -2,12 +2,10 @@ package aoc2021
 
 import cats.effect.kernel.Ref
 import cats.effect.{IO, IOApp}
-import cats.syntax.all._
+import cats.syntax.all.*
 import fs2.concurrent.SignallingRef
 import fs2.io.file.{Files, Flags, Path}
 import fs2.{Stream, text}
-
-import java.nio.file.Paths
 
 object Day4 extends IOApp.Simple {
 
@@ -15,7 +13,7 @@ object Day4 extends IOApp.Simple {
 
   object Bingo {
     case class Board(rows: Seq[Seq[Int]]) {
-      val columns: Seq[Seq[Int]] = rows.indices.map(i => rows.map(_ (i)))
+      val columns: Seq[Seq[Int]] = rows.indices.map(i => rows.map(_(i)))
       val lines: Seq[Seq[Int]] = rows ++ columns
     }
   }
@@ -27,7 +25,7 @@ object Day4 extends IOApp.Simple {
   }
 
   val input: Stream[IO, String] = Files[IO]
-    .readAll(Path.fromNioPath(Paths.get(s"${System.getenv("HOME")}/Documents/AOC_4_input.txt")), 1024, Flags.Read)
+    .readAll(Path(getClass.getResource("/aoc/AOC_4_input.txt").getPath), 1024, Flags.Read)
     .through(text.utf8.decode andThen text.lines)
 
   val program: Stream[IO, Unit] =
@@ -54,23 +52,23 @@ object Day4 extends IOApp.Simple {
             Stream.eval(Ref[IO].of(bingo.boards)).flatMap { boardsPlaying =>
               Stream.eval(Ref[IO].of(Seq.empty[Int])).flatMap { calledNumbers =>
                 Stream.emits(bingo.numbers).evalMap { number =>
-                  calledNumbers
-                    .updateAndGet(_ :+ number)
-                    .flatMap { calledNumbers =>
-                      boardsPlaying.modify { boardsPlaying =>
-                        val winners = boardsPlaying
-                          .map(board => board -> check(board, calledNumbers))
-                          .filter(_._2.isDefined)
-                        (boardsPlaying -- winners.map(_._1), winners.map(_._2))
+                    calledNumbers
+                      .updateAndGet(_ :+ number)
+                      .flatMap { calledNumbers =>
+                        boardsPlaying.modify { boardsPlaying =>
+                            val winners = boardsPlaying
+                              .map(board => board -> check(board, calledNumbers))
+                              .filter(_._2.isDefined)
+                            (boardsPlaying -- winners.map(_._1), winners.map(_._2))
+                          }
+                          .flatMap { scores =>
+                            IO(println(s"Scores at $number: ${scores.flatten}")) >>
+                              boardsPlaying.get.flatMap { boardsPlaying =>
+                                gameOver.set(true).whenA(boardsPlaying.isEmpty)
+                              }
+                          }
                       }
-                        .flatMap { scores =>
-                          IO(println(s"Scores at $number: ${scores.flatten}")) >>
-                            boardsPlaying.get.flatMap { boardsPlaying =>
-                              gameOver.set(true).whenA(boardsPlaying.isEmpty)
-                            }
-                        }
-                    }
-                }
+                  }
                   .interruptWhen(gameOver)
                   .onFinalize(calledNumbers.get.flatMap(numbers =>
                     IO(println(s"Game over!\nCalled numbers: $numbers"))
