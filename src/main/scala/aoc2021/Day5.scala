@@ -29,10 +29,12 @@ object Day5 extends IOApp.Simple {
     val lines: Stream[IO, Line] = input.map { coords =>
       def stringToCoord(s: String): Coord = s.split(",").toList match {
         case x :: y :: Nil => Coord(x.trim.toInt, y.trim.toInt)
+        case _ => throw RuntimeException(s"Bad input: $s")
       }
 
       coords.split("->").toList match {
         case c1 :: c2 :: Nil => Line(stringToCoord(c1), stringToCoord(c2))
+        case _ => throw RuntimeException(s"Bad coordinates: $coords")
       }
     }
 

@@ -24,6 +24,7 @@ object Day8 extends AOCApp {
               signals.trim.split(" ").toSeq,
               outputs.trim.split(" ").toSeq
             )
+          case _ => throw RuntimeException(s"Bad input: $line")
         }
       }
 

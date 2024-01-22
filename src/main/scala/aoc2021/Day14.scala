@@ -127,6 +127,7 @@ object Day14 extends AOCApp {
           line.split("->").toList match {
             case pair :: element :: Nil =>
               rules.update(_ + InsertionRule(pair.trim, element.trim.charAt(0)))
+            case _ => IO.unit
           }
         }
   }

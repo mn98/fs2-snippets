@@ -24,6 +24,7 @@ object Day2 extends IOApp.Simple {
         line.split(" ").toList match {
           case direction :: distance :: Nil =>
             Command(Command.Direction.withName(direction.toLowerCase), distance.toInt)
+          case _ => throw RuntimeException(s"Bad command: $line")
         }
       }
 

@@ -70,6 +70,7 @@ object Day5 extends AOCApp {
                     val mapping = Mapping(destination.toLong, source.toLong, length.toLong)
                     val mapper = head.copy(mappings = head.mappings :+ mapping)
                     mapper :: tail
+                  case Nil => Nil
                 }
           }
           .onFinalize {
@@ -111,6 +112,7 @@ object Day5 extends AOCApp {
                     val mapping = Mapping(destination.toLong, source.toLong, length.toLong)
                     val mapper = head.copy(mappings = head.mappings :+ mapping)
                     mapper :: tail
+                  case Nil => Nil
                 }
           }
           .onComplete {

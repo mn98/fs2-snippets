@@ -40,6 +40,7 @@ object Day13 extends AOCApp {
       def apply(csv: String): Point = {
         csv.split(',').toList match {
           case x :: y :: Nil => Point(x.toInt, y.toInt)
+          case _ => throw RuntimeException(s"Bad input: $csv")
         }
       }
     }
@@ -63,6 +64,7 @@ object Day13 extends AOCApp {
           val instruction = line.stripPrefix("fold along ").split('=').toList match {
             case axis :: index :: Nil =>
               Instruction(Paper.Axis.withName(axis.toUpperCase), index.toInt)
+            case _ => throw RuntimeException(s"Bad instruction: $line")
           }
           instructions.update(instructions => instructions :+ instruction)
         case _ =>

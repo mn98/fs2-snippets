@@ -82,6 +82,7 @@ object Day12 extends AOCApp {
             caveSystem.update { caveSystem =>
               caveSystem.copy(tunnels = caveSystem.tunnels + tunnel)
             }
+          case _ => IO.unit
         }
       }
       .onFinalize {
